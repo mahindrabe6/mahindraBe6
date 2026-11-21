@@ -1,0 +1,52 @@
+name: Build Hostinger Ready ZIP
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-hostinger-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Package dist/ for Hostinger public_html
+        run: |
+          cd dist
+          zip -r ../hostinger-public-html.zip . .htaccess
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hostinger-public-html
+          path: hostinger-public-html.zip
+
+      - name: Update GitHub Release asset (direct ZIP download)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="hostinger-latest"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" hostinger-public-html.zip --clobber
+          else
+            gh release create "$TAG" hostinger-public-html.zip \
+              --title "Hostinger Ready Build (public_html)" \
+              --notes "Download hostinger-public-html.zip and extract its contents directly inside Hostinger File Manager -> public_html/."
+          fi

@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <base href="http://localhost:3000/" />
+    <meta name="viewport" content="width=720, height=1280, initial-scale=1.0" />
+    <title>Mahindra BE6 — Electric Fleet Club</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 720px;
+        height: 1280px;
+        overflow: hidden;
+        background: #090d16;
+        color: #f8fafc;
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .stage {
+        position: relative;
+        width: 720px;
+        height: 1280px;
+        overflow: hidden;
+        background: radial-gradient(circle at 50% 18%, rgba(224, 142, 69, 0.2), transparent 56%),
+          radial-gradient(circle at 80% 85%, rgba(16, 185, 129, 0.14), transparent 46%),
+          #090d16;
+      }
+      .grid-bg {
+        position: absolute;
+        inset: 0;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 48px 48px;
+        opacity: 0.55;
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        padding: 58px 42px 54px;
+        will-change: opacity, transform;
+      }
+      .brand-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 18px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(224, 142, 69, 0.38);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #f3b176;
+      }
+      .brand-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #10b981;
+        box-shadow: 0 0 12px #10b981;
+      }
+      .hero-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 56px;
+        line-height: 1.04;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        text-align: center;
+        color: #ffffff;
+      }
+      .hero-title span {
+        color: #e08e45;
+      }
+      .hero-sub {
+        font-size: 21px;
+        line-height: 1.4;
+        font-weight: 600;
+        color: #cbd5e1;
+        text-align: center;
+        max-width: 580px;
+      }
+      .hero-car-frame {
+        position: relative;
+        width: 636px;
+        height: 460px;
+        border-radius: 32px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 32px 80px -18px rgba(0, 0, 0, 0.78);
+      }
+      .hero-car-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        will-change: transform;
+      }
+      .hero-car-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, transparent 42%, rgba(9, 13, 22, 0.92) 100%);
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        padding: 28px;
+      }
+      .bonus-chip {
+        padding: 12px 20px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #e08e45, #c26d27);
+        color: #090d16;
+        font-weight: 800;
+        font-size: 20px;
+        box-shadow: 0 12px 26px rgba(224, 142, 69, 0.4);
+      }
+      .phone {
+        width: 470px;
+        height: 770px;
+        border-radius: 44px;
+        background: #f6f7fa;
+        color: #0f172a;
+        border: 10px solid #1e293b;
+        box-shadow: 0 40px 90px -20px rgba(0, 0, 0, 0.85),
+          0 0 0 1px rgba(255, 255, 255, 0.12);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        will-change: transform;
+      }
+      .phone-top {
+        height: 62px;
+        background: #ffffff;
+        border-bottom: 1px solid #e6e8ee;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 22px;
+      }
+      .phone-brand {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        font-size: 18px;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .phone-wallet {
+        background: #fdf6ee;
+        border: 1px solid rgba(184, 107, 40, 0.28);
+        color: #9a541a;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .phone-body {
+        flex: 1;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .card {
+        background: #ffffff;
+        border: 1px solid #e6e8ee;
+        border-radius: 22px;
+        padding: 16px;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+      }
+      .fleet-banner {
+        position: relative;
+        height: 170px;
+        border-radius: 22px;
+        overflow: hidden;
+        color: #ffffff;
+      }
+      .fleet-banner img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .fleet-banner-grad {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(9, 13, 22, 0.88), rgba(9, 13, 22, 0.35));
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .metric-box {
+        background: #f6f7fa;
+        border-radius: 14px;
+        padding: 10px 8px;
+        text-align: center;
+      }
+      .metric-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+      }
+      .metric-val {
+        margin-top: 3px;
+        font-size: 17px;
+        font-weight: 800;
+        color: #0f172a;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .metric-val.green {
+        color: #059669;
+      }
+      .cta-mini {
+        width: 100%;
+        padding: 14px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #e08e45, #c26d27);
+        color: #090d16;
+        font-weight: 800;
+        font-size: 15px;
+        text-align: center;
+      }
+      .toast-pop {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: #ecfdf5;
+        border: 1px solid #6ee7b7;
+        color: #065f46;
+        font-weight: 800;
+        font-size: 15px;
+      }
+      .feature-list {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .feature-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: #f6f7fa;
+        border: 1px solid #e2e8f0;
+      }
+      .feat-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        background: #0f172a;
+        color: #e08e45;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+      .bottom-bar {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #cbd5e1;
+      }
+      .bottom-bar span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .progress-track {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #e08e45, #10b981);
+      }
+      .pulse-cta {
+        padding: 20px 36px;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #e08e45, #c26d27);
+        color: #090d16;
+        font-family: 'Outfit', sans-serif;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        box-shadow: 0 22px 48px rgba(224, 142, 69, 0.45);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="grid-bg"></div>
+
+      <!-- SCENE 1: HERO HOOK (0.0s - 4.2s) -->
+      <section id="s1" class="scene">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:14px;">
+          <div class="brand-pill">
+            <span class="brand-dot"></span>
+            <span>Mahindra BE6 · Electric Fleet Club</span>
+          </div>
+          <h1 class="hero-title">
+            Drive the Future.<br /><span>Daily Fleet Rewards.</span>
+          </h1>
+          <p class="hero-sub">
+            Join free in 10 seconds and unlock instant ₹40 welcome credit plus daily EV fleet payouts.
+          </p>
+        </div>
+
+        <div class="hero-car-frame">
+          <img id="s1Img" src="/src/assets/images/be6_luxury_hero_1795164411257.jpg" alt="Mahindra BE6 Electric SUV" />
+          <div class="hero-car-overlay">
+            <div>
+              <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:#f3b176;">
+                Flagship EV Series
+              </div>
+              <div style="font-family:'Outfit',sans-serif;font-size:30px;font-weight:800;color:#fff;margin-top:2px;">
+                Mahindra BE6
+              </div>
+            </div>
+            <div class="bonus-chip">₹40 Free Bonus</div>
+          </div>
+        </div>
+
+        <div class="bottom-bar">
+          <span>✓ Verified UPI</span>
+          <span>⚡ 15m IMPS Payout</span>
+          <span>🎁 ₹0 Platform Fee</span>
+        </div>
+      </section>
+
+      <!-- SCENE 2: FLEET PASSES & DAILY REWARDS (4.2s - 9.2s) -->
+      <section id="s2" class="scene">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+          <div class="brand-pill">BE6 Mobility Passes</div>
+          <h2 class="hero-title" style="font-size:48px;">
+            Start From <span>Just ₹250</span>
+          </h2>
+          <p class="hero-sub" style="font-size:19px;">
+            Pick your electric SUV pass and collect automated daily fleet rewards.
+          </p>
+        </div>
+
+        <div id="s2Phone" class="phone">
+          <div class="phone-top">
+            <div class="phone-brand">
+              <span style="width:28px;height:28px;border-radius:8px;background:#0f172a;color:#e08e45;display:inline-flex;align-items:center;justify-content:center;font-size:12px;">BE6</span>
+              <span>Mahindra BE6</span>
+            </div>
+            <div class="phone-wallet">₹40.00</div>
+          </div>
+
+          <div class="phone-body">
+            <div class="fleet-banner">
+              <img src="/src/assets/images/be6_champagne_gold_1795164411278.jpg" alt="BE6 Champagne Gold" />
+              <div class="fleet-banner-grad">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span style="background:#e08e45;color:#090d16;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;">FLAGSHIP PASS</span>
+                  <span style="font-size:12px;font-weight:700;color:#cbd5e1;">30-Day Cycle</span>
+                </div>
+                <div>
+                  <div style="font-family:'Outfit',sans-serif;font-size:24px;font-weight:800;">BE6 Essential</div>
+                  <div style="font-size:13px;color:#cbd5e1;">Champagne Gold · Active Fleet</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="display:flex;flex-direction:column;gap:12px;">
+              <div class="metric-grid">
+                <div class="metric-box">
+                  <div class="metric-label">Pass Value</div>
+                  <div class="metric-val">₹250</div>
+                </div>
+                <div class="metric-box">
+                  <div class="metric-label">Daily Reward</div>
+                  <div class="metric-val green">₹60</div>
+                </div>
+                <div class="metric-box">
+                  <div class="metric-label">Total Payout</div>
+                  <div class="metric-val">₹1,800</div>
+                </div>
+              </div>
+              <div class="cta-mini">Activate BE6 Essential · ₹250</div>
+            </div>
+
+            <div id="s2Row1" class="card" style="display:flex;align-items:center;gap:12px;">
+              <img src="/src/assets/images/be6_obsidian_stealth_1795164412224.jpg" alt="BE6 Obsidian" style="width:94px;height:68px;border-radius:14px;object-fit:cover;" />
+              <div style="flex:1;">
+                <div style="font-size:15px;font-weight:800;">BE6 Obsidian Pro</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;">Pass ₹400 · ₹100/day · 15 Days</div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#059669;">₹1,500</div>
+            </div>
+
+            <div id="s2Row2" class="card" style="display:flex;align-items:center;gap:12px;">
+              <img src="/src/assets/images/be6_titanium_silver_1795164410809.jpg" alt="BE6 Titanium" style="width:94px;height:68px;border-radius:14px;object-fit:cover;" />
+              <div style="flex:1;">
+                <div style="font-size:15px;font-weight:800;">BE6 Titanium VIP</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px;">Pass ₹1,450 · ₹360/day · 12 Days</div>
+              </div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#059669;">₹4,320</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-bar">
+          <span>10 BE6 Fleet Tiers · ₹250 to ₹1,450</span>
+        </div>
+      </section>
+
+      <!-- SCENE 3: LIVE 7-DAY REWARD CURVE & DAILY CHECK-IN (9.2s - 14.0s) -->
+      <section id="s3" class="scene">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+          <div class="brand-pill">Live Wallet Tracker</div>
+          <h2 class="hero-title" style="font-size:46px;">
+            <span>+₹25 Daily</span> Check-In Bonus
+          </h2>
+          <p class="hero-sub" style="font-size:19px;">
+            Track your 7-day fleet reward curve and claim daily check-in bonuses live.
+          </p>
+        </div>
+
+        <div id="s3Phone" class="phone">
+          <div class="phone-top">
+            <div class="phone-brand">
+              <span style="width:28px;height:28px;border-radius:8px;background:#0f172a;color:#e08e45;display:inline-flex;align-items:center;justify-content:center;font-size:12px;">BE6</span>
+              <span>Dashboard</span>
+            </div>
+            <div id="s3Wallet" class="phone-wallet" style="background:#ecfdf5;border-color:#6ee7b7;color:#065f46;">₹600.00</div>
+          </div>
+
+          <div class="phone-body">
+            <div id="s3Toast" class="toast-pop" style="opacity:0;transform:translateY(14px);">
+              <span style="width:28px;height:28px;border-radius:999px;background:#10b981;color:#fff;display:inline-flex;align-items:center;justify-content:center;">✓</span>
+              <span>+₹25 Daily Check-In Bonus Credited!</span>
+            </div>
+
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px;">
+                <div>
+                  <div style="font-size:15px;font-weight:800;">7-Day Reward Curve</div>
+                  <div style="font-size:12px;color:#64748b;">Check-ins, fleet rewards &amp; bonuses</div>
+                </div>
+                <span style="padding:4px 10px;border-radius:999px;background:#ecfdf5;color:#059669;font-size:12px;font-weight:800;">+₹625 (7d)</span>
+              </div>
+
+              <svg viewBox="0 0 380 175" style="width:100%;height:175px;overflow:visible;">
+                <defs>
+                  <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.34" />
+                    <stop offset="100%" stop-color="#10b981" stop-opacity="0.0" />
+                  </linearGradient>
+                </defs>
+                <line x1="10" y1="145" x2="370" y2="145" stroke="#e2e8f0" stroke-dasharray="4 4" />
+                <line x1="10" y1="95" x2="370" y2="95" stroke="#e2e8f0" stroke-dasharray="4 4" />
+                <line x1="10" y1="45" x2="370" y2="45" stroke="#e2e8f0" stroke-dasharray="4 4" />
+                <path id="s3Area" d="M16 140 C70 132, 110 112, 155 96 C205 78, 255 62, 300 42 C328 29, 348 22, 366 16 L366 150 L16 150 Z" fill="url(#areaGrad)" opacity="0" />
+                <path id="s3Line" d="M16 140 C70 132, 110 112, 155 96 C205 78, 255 62, 300 42 C328 29, 348 22, 366 16" fill="none" stroke="#10b981" stroke-width="5" stroke-linecap="round" stroke-dasharray="520" stroke-dashoffset="520" />
+                <circle id="s3Dot" cx="366" cy="16" r="7" fill="#10b981" stroke="#ffffff" stroke-width="3" opacity="0" />
+              </svg>
+              <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:#64748b;margin-top:4px;">
+                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span style="color:#059669;">Today</span>
+              </div>
+            </div>
+
+            <div class="card" style="background:#0f172a;color:#fff;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:12px;color:#f3b176;font-weight:700;">DAILY STREAK ACTIVE</div>
+                <div style="font-size:18px;font-weight:800;margin-top:3px;">Tap Daily Check-In</div>
+                <div style="font-size:12px;color:#94a3b8;margin-top:2px;">Instant ₹25 wallet credit every day</div>
+              </div>
+              <div style="padding:12px 16px;border-radius:14px;background:#e08e45;color:#090d16;font-weight:800;font-size:15px;">
+                Claim ₹25
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-bar">
+          <span>Instant Wallet Credit · Real-Time Activity Feed</span>
+        </div>
+      </section>
+
+      <!-- SCENE 4: FAST UPI + ZERO FEE IMPS + TEAM BONUS (14.0s - 18.2s) -->
+      <section id="s4" class="scene">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+          <div class="brand-pill">Direct Bank Settlement</div>
+          <h2 class="hero-title" style="font-size:48px;">
+            <span>₹0 Fee</span> IMPS Payouts
+          </h2>
+          <p class="hero-sub" style="font-size:19px;">
+            Seamless UPI top-ups, 15-minute bank settlements &amp; 25% referral rewards.
+          </p>
+        </div>
+
+        <div id="s4Phone" class="phone">
+          <div class="phone-top">
+            <div class="phone-brand">
+              <span style="width:28px;height:28px;border-radius:8px;background:#0f172a;color:#e08e45;display:inline-flex;align-items:center;justify-content:center;font-size:12px;">BE6</span>
+              <span>Settlement &amp; Team</span>
+            </div>
+            <div class="phone-wallet" style="background:#ecfdf5;border-color:#6ee7b7;color:#065f46;">IMPS LIVE</div>
+          </div>
+
+          <div class="phone-body" style="justify-content:space-between;">
+            <div class="feature-list">
+              <div id="s4F1" class="feature-row">
+                <div class="feat-badge">₹</div>
+                <div>
+                  <div style="font-size:16px;font-weight:800;">Instant UPI &amp; QR Top-Ups</div>
+                  <div style="font-size:13px;color:#64748b;margin-top:2px;">PhonePe, GPay, Paytm &amp; BHIM supported</div>
+                </div>
+              </div>
+              <div id="s4F2" class="feature-row">
+                <div class="feat-badge" style="background:#059669;color:#fff;">⚡</div>
+                <div>
+                  <div style="font-size:16px;font-weight:800;">15-Minute IMPS Bank Payouts</div>
+                  <div style="font-size:13px;color:#64748b;margin-top:2px;">Direct to your verified bank account</div>
+                </div>
+              </div>
+              <div id="s4F3" class="feature-row">
+                <div class="feat-badge" style="background:#e08e45;color:#090d16;">★</div>
+                <div>
+                  <div style="font-size:16px;font-weight:800;">Invite Friends · 25% Team Bonus</div>
+                  <div style="font-size:13px;color:#64748b;margin-top:2px;">Unlock instant commission across your team</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="background:#0f172a;color:#fff;padding:20px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:12px;font-weight:800;color:#6ee7b7;text-transform:uppercase;">Recent IMPS Settlement</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8;">UTR VERIFIED</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;">
+                <div style="font-family:'Outfit',sans-serif;font-size:32px;font-weight:800;color:#fff;">₹1,250.00</div>
+                <span style="padding:5px 12px;border-radius:999px;background:#10b981;color:#090d16;font-size:12px;font-weight:800;">Settled · ₹0 Fee</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-bar">
+          <span>Verified Bank Transfer · 24/7 Member Access</span>
+        </div>
+      </section>
+
+      <!-- SCENE 5: FINALE CTA (18.2s - 22.0s) -->
+      <section id="s5" class="scene">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:20px;">
+          <div class="brand-pill">
+            <span class="brand-dot"></span>
+            <span>Limited Welcome Offer</span>
+          </div>
+          <h2 class="hero-title" style="font-size:54px;">
+            Join Free &amp; Claim<br /><span>₹40 Bonus</span> Today
+          </h2>
+        </div>
+
+        <div class="hero-car-frame" style="height:490px;">
+          <img id="s5Img" src="/src/assets/images/be6_crimson_velvet_1795164411551.jpg" alt="Mahindra BE6 Crimson Velvet" />
+          <div class="hero-car-overlay">
+            <div>
+              <div style="font-size:14px;font-weight:800;color:#f3b176;text-transform:uppercase;letter-spacing:0.12em;">
+                Mahindra BE6 Electric Fleet
+              </div>
+              <div style="font-size:24px;font-weight:800;color:#fff;margin-top:4px;">
+                Starts ₹250 · Daily Rewards · ₹0 Fee IMPS
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:center;gap:18px;margin-bottom:10px;">
+          <div id="s5Cta" class="pulse-cta">Claim ₹40 &amp; Start Today →</div>
+          <div class="bottom-bar">
+            <span>10-Second Sign Up · No OTP Delay</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="progress-track">
+        <div id="progressBar" class="progress-fill"></div>
+      </div>
+    </div>
+
+    <script>
+      const scenes = [
+        { id: 's1', start: 0.0, end: 4.2 },
+        { id: 's2', start: 4.2, end: 9.2 },
+        { id: 's3', start: 9.2, end: 14.0 },
+        { id: 's4', start: 14.0, end: 18.2 },
+        { id: 's5', start: 18.2, end: 22.0 },
+      ];
+      const total = 22.0;
+      const clamp01 = (v) => Math.max(0, Math.min(1, v));
+      const easeOut = (v) => 1 - Math.pow(1 - clamp01(v), 3);
+
+      window.__updateAdAt = (t) => {
+        const clamped = Math.max(0, Math.min(total, t));
+        document.getElementById('progressBar').style.width = ((clamped / total) * 100).toFixed(2) + '%';
+
+        for (const sc of scenes) {
+          const el = document.getElementById(sc.id);
+          const fadeIn = sc.start === 0 ? 1 : easeOut((clamped - sc.start) / 0.35);
+          const fadeOut = sc.id === 's5' ? 1 : clamp01((sc.end - clamped) / 0.25);
+          const visible = clamped >= sc.start && (clamped < sc.end || sc.id === 's5');
+          const op = visible ? Math.min(fadeIn, fadeOut) : 0;
+          const localT = Math.max(0, clamped - sc.start);
+          const enterY = (1 - fadeIn) * 20;
+          el.style.opacity = op.toFixed(4);
+          el.style.transform = `translateY(${enterY.toFixed(2)}px)`;
+
+          if (sc.id === 's1' && visible) {
+            const zoom = 1.07 - 0.07 * easeOut(localT / 4.2);
+            document.getElementById('s1Img').style.transform = `scale(${zoom.toFixed(4)})`;
+          }
+          if (sc.id === 's2' && visible) {
+            const bob = Math.sin(localT * 1.4) * 5;
+            document.getElementById('s2Phone').style.transform = `translateY(${bob.toFixed(2)}px)`;
+            const r1 = easeOut((localT - 0.5) / 0.5);
+            const r2 = easeOut((localT - 0.9) / 0.5);
+            document.getElementById('s2Row1').style.opacity = r1.toFixed(3);
+            document.getElementById('s2Row1').style.transform = `translateX(${((1 - r1) * 18).toFixed(2)}px)`;
+            document.getElementById('s2Row2').style.opacity = r2.toFixed(3);
+            document.getElementById('s2Row2').style.transform = `translateX(${((1 - r2) * 18).toFixed(2)}px)`;
+          }
+          if (sc.id === 's3' && visible) {
+            const bob = Math.sin(localT * 1.4) * 5;
+            document.getElementById('s3Phone').style.transform = `translateY(${bob.toFixed(2)}px)`;
+            const curveP = easeOut((localT - 0.25) / 1.8);
+            document.getElementById('s3Line').style.strokeDashoffset = (520 * (1 - curveP)).toFixed(1);
+            document.getElementById('s3Area').style.opacity = clamp01(curveP * 1.2).toFixed(3);
+            document.getElementById('s3Dot').style.opacity = clamp01((curveP - 0.85) * 6.5).toFixed(3);
+            const toastP = easeOut((localT - 1.1) / 0.45);
+            document.getElementById('s3Toast').style.opacity = toastP.toFixed(3);
+            document.getElementById('s3Toast').style.transform = `translateY(${((1 - toastP) * 14).toFixed(2)}px)`;
+            document.getElementById('s3Wallet').textContent = localT >= 1.2 ? '₹625.00' : '₹600.00';
+          }
+          if (sc.id === 's4' && visible) {
+            const bob = Math.sin(localT * 1.4) * 5;
+            document.getElementById('s4Phone').style.transform = `translateY(${bob.toFixed(2)}px)`;
+            ['s4F1', 's4F2', 's4F3'].forEach((fid, idx) => {
+              const p = easeOut((localT - (0.15 + idx * 0.35)) / 0.45);
+              const fEl = document.getElementById(fid);
+              fEl.style.opacity = p.toFixed(3);
+              fEl.style.transform = `translateY(${((1 - p) * 14).toFixed(2)}px)`;
+            });
+          }
+          if (sc.id === 's5' && visible) {
+            const zoom = 1.06 - 0.06 * easeOut(localT / 3.8);
+            document.getElementById('s5Img').style.transform = `scale(${zoom.toFixed(4)})`;
+            const pulse = 1 + Math.sin(localT * 4.5) * 0.025;
+            document.getElementById('s5Cta').style.transform = `scale(${pulse.toFixed(4)})`;
+          }
+        }
+      };
+
+      window.__updateAdAt(0);
+    </script>
+  </body>
+</html>

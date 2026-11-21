@@ -1,0 +1,8 @@
+{
+  "name": "Mahindra BE6",
+  "description": "Mahindra BE6 Luxury Electric Cars Fleet Investment & Daily Yield Platform",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

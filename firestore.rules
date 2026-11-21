@@ -1,0 +1,494 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net: Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Identity & Validation Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() &&
+        'email' in request.auth.token &&
+        request.auth.token.email is string &&
+        request.auth.token.email.lower() == 'techbcofficialaman@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidBankDetails(bank) {
+      return bank is map &&
+        bank.keys().hasAll(['accountHolderName', 'accountNumber', 'ifscCode']) &&
+        bank.keys().hasOnly(['accountHolderName', 'accountNumber', 'ifscCode']) &&
+        bank.accountHolderName is string && bank.accountHolderName.size() >= 2 && bank.accountHolderName.size() <= 80 &&
+        bank.accountNumber is string && bank.accountNumber.size() >= 9 && bank.accountNumber.size() <= 18 && bank.accountNumber.matches('^[0-9]{9,18}$') &&
+        bank.ifscCode is string && bank.ifscCode.size() == 11 && bank.ifscCode.matches('^[A-Z]{4}0[A-Z0-9]{6}$');
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['email', 'createdAt']) &&
+        data.keys().hasOnly(['email', 'createdAt']) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidBroadcastMessage(b) {
+      return b is map &&
+        b.keys().hasAll(['id', 'title', 'message', 'tone', 'active', 'sentAt']) &&
+        b.keys().hasOnly(['id', 'title', 'message', 'tone', 'active', 'sentAt']) &&
+        isValidId(b.id) &&
+        b.id.size() >= 3 && b.id.size() <= 80 &&
+        b.title is string && b.title.size() >= 2 && b.title.size() <= 60 &&
+        b.message is string && b.message.size() >= 4 && b.message.size() <= 240 &&
+        b.tone in ['promo', 'info', 'warning'] &&
+        b.active is bool &&
+        b.sentAt is string && b.sentAt.size() >= 4 && b.sentAt.size() <= 40;
+    }
+
+    function isValidPlatformSettings(data) {
+      return data.keys().hasAll([
+          'merchantUpiId', 'merchantName', 'dailyCheckInCode',
+          'checkInRewardAmount', 'signupBonusAmount', 'maxWithdrawalAmount',
+          'maintenanceMode', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'merchantUpiId', 'merchantName', 'dailyCheckInCode',
+          'checkInRewardAmount', 'signupBonusAmount', 'maxWithdrawalAmount',
+          'maintenanceMode', 'qrMode', 'customQrDataUrl', 'activeBroadcast', 'updatedAt'
+        ]) &&
+        data.merchantUpiId is string && data.merchantUpiId.size() >= 3 && data.merchantUpiId.size() <= 100 &&
+        data.merchantName is string && data.merchantName.size() >= 2 && data.merchantName.size() <= 120 &&
+        data.dailyCheckInCode is string && data.dailyCheckInCode.size() >= 2 && data.dailyCheckInCode.size() <= 32 && data.dailyCheckInCode.matches('^[A-Z0-9]+$') &&
+        data.checkInRewardAmount is number && data.checkInRewardAmount >= 0 && data.checkInRewardAmount <= 500 &&
+        data.signupBonusAmount is number && data.signupBonusAmount >= 0 && data.signupBonusAmount <= 500 &&
+        data.maxWithdrawalAmount is number && data.maxWithdrawalAmount >= 100 && data.maxWithdrawalAmount <= 100000 &&
+        data.maintenanceMode is bool &&
+        (!('qrMode' in data) || data.qrMode in ['generated', 'uploaded']) &&
+        (!('customQrDataUrl' in data) || data.customQrDataUrl == null || (
+          data.customQrDataUrl is string &&
+          data.customQrDataUrl.size() <= 260000 &&
+          data.customQrDataUrl.matches('^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$')
+        )) &&
+        (!('activeBroadcast' in data) || data.activeBroadcast == null || isValidBroadcastMessage(data.activeBroadcast)) &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPlanConfig(data) {
+      return data.keys().hasAll([
+          'id', 'category', 'name', 'modelName', 'subtitle',
+          'dailyIncome', 'totalIncome', 'durationDays', 'investmentAmount',
+          'imageUrl', 'featured', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'category', 'name', 'modelName', 'subtitle',
+          'dailyIncome', 'totalIncome', 'durationDays', 'investmentAmount',
+          'imageUrl', 'featured', 'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        data.category in ['normal', 'vip'] &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
+        data.modelName is string && data.modelName.size() >= 2 && data.modelName.size() <= 100 &&
+        data.subtitle is string && data.subtitle.size() >= 2 && data.subtitle.size() <= 120 &&
+        data.investmentAmount is number && data.investmentAmount >= 100 && data.investmentAmount < 1500 &&
+        data.dailyIncome is number && data.dailyIncome > 0 && data.dailyIncome <= data.investmentAmount * 0.25 &&
+        data.durationDays is number && data.durationDays >= 7 && data.durationDays <= 30 &&
+        data.totalIncome is number && data.totalIncome > 0 && data.totalIncome <= 5000 &&
+        data.imageUrl is string && data.imageUrl.size() >= 1 && data.imageUrl.size() <= 250 &&
+        data.featured is bool &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll([
+          'uid', 'userName', 'email', 'phone', 'accountStatus',
+          'balance', 'referralCode', 'darkMode', 'createdAt', 'updatedAt', 'lastLoginAt'
+        ]) &&
+        data.keys().hasOnly([
+          'uid', 'userName', 'email', 'phone', 'accountStatus',
+          'balance', 'referralCode', 'referredByCode', 'referredByUid',
+          'bankDetails', 'lastCheckInDate', 'lastCheckInReward',
+          'lastPlanActionId', 'darkMode', 'createdAt', 'updatedAt', 'lastLoginAt'
+        ]) &&
+        isValidId(data.uid) &&
+        data.userName is string && data.userName.size() >= 2 && data.userName.size() <= 80 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+        data.phone is string && (data.phone == '' || (data.phone.size() == 10 && data.phone.matches('^[0-9]{10}$'))) &&
+        data.accountStatus in ['active', 'suspended'] &&
+        data.balance is number && data.balance >= 0 && data.balance <= 10000000 &&
+        data.referralCode is string && data.referralCode.size() >= 6 && data.referralCode.size() <= 16 && data.referralCode.matches('^[A-Z0-9]{6,16}$') &&
+        (!('referredByCode' in data) || data.referredByCode == null || (data.referredByCode is string && data.referredByCode.size() >= 6 && data.referredByCode.size() <= 16)) &&
+        (!('referredByUid' in data) || data.referredByUid == null || isValidId(data.referredByUid)) &&
+        (!('bankDetails' in data) || data.bankDetails == null || isValidBankDetails(data.bankDetails)) &&
+        (!('lastCheckInDate' in data) || data.lastCheckInDate == null || (data.lastCheckInDate is string && data.lastCheckInDate.size() <= 20)) &&
+        (!('lastCheckInReward' in data) || data.lastCheckInReward == null || (data.lastCheckInReward is number && data.lastCheckInReward >= 0 && data.lastCheckInReward <= 500)) &&
+        (!('lastPlanActionId' in data) || data.lastPlanActionId == null || isValidId(data.lastPlanActionId)) &&
+        data.darkMode is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp &&
+        data.lastLoginAt is timestamp;
+    }
+
+    function isValidActivePlan(data) {
+      return data.keys().hasAll([
+          'id', 'uid', 'planId', 'name', 'modelName', 'dailyIncome',
+          'totalIncome', 'durationDays', 'investmentAmount', 'purchasedAt',
+          'daysClaimed', 'imageUrl', 'updatedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'uid', 'planId', 'name', 'modelName', 'dailyIncome',
+          'totalIncome', 'durationDays', 'investmentAmount', 'purchasedAt',
+          'daysClaimed', 'lastClaimDate', 'imageUrl', 'updatedAt'
+        ]) &&
+        isValidId(data.id) &&
+        isValidId(data.uid) &&
+        isValidId(data.planId) &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
+        data.modelName is string && data.modelName.size() >= 2 && data.modelName.size() <= 100 &&
+        data.investmentAmount is number && data.investmentAmount >= 100 && data.investmentAmount < 1500 &&
+        data.dailyIncome is number && data.dailyIncome > 0 && data.dailyIncome <= data.investmentAmount * 0.25 &&
+        data.durationDays is number && data.durationDays >= 7 && data.durationDays <= 30 &&
+        data.totalIncome is number && data.totalIncome > 0 && data.totalIncome <= 5000 &&
+        data.purchasedAt is timestamp &&
+        data.daysClaimed is number && data.daysClaimed >= 0 && data.daysClaimed <= data.durationDays &&
+        (!('lastClaimDate' in data) || data.lastClaimDate == null || (data.lastClaimDate is string && data.lastClaimDate.size() <= 20)) &&
+        data.imageUrl is string && data.imageUrl.size() >= 1 && data.imageUrl.size() <= 250 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll([
+          'id', 'uid', 'userName', 'description', 'kind', 'amount', 'isCredit', 'timestamp'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'uid', 'userName', 'description', 'kind', 'amount', 'isCredit', 'timestamp'
+        ]) &&
+        isValidId(data.id) &&
+        isValidId(data.uid) &&
+        data.userName is string && data.userName.size() >= 2 && data.userName.size() <= 80 &&
+        data.description is string && data.description.size() >= 2 && data.description.size() <= 160 &&
+        data.kind in ['withdrawal', 'purchase', 'recharge', 'checkin', 'yield', 'bonus', 'admin'] &&
+        data.amount is number && data.amount >= 0 && data.amount <= 1000000 &&
+        data.isCredit is bool &&
+        data.timestamp is timestamp;
+    }
+
+    function isValidRechargeRequest(data) {
+      return data.keys().hasAll([
+          'id', 'uid', 'userName', 'userPhone', 'amount', 'method', 'utrNumber', 'status', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'uid', 'userName', 'userPhone', 'amount', 'method', 'utrNumber',
+          'status', 'rejectionReason', 'createdAt', 'reviewedAt'
+        ]) &&
+        isValidId(data.id) &&
+        isValidId(data.uid) &&
+        data.userName is string && data.userName.size() >= 2 && data.userName.size() <= 80 &&
+        data.userPhone is string && data.userPhone.size() <= 120 &&
+        data.amount is number && data.amount >= 100 && data.amount <= 50000 &&
+        data.method in ['UPI_ID', 'QR_CODE', 'DIRECT_IMPS'] &&
+        data.utrNumber is string && data.utrNumber.size() >= 10 && data.utrNumber.size() <= 22 && data.utrNumber.matches('^[A-Z0-9]{10,22}$') &&
+        data.status in ['pending', 'approved', 'rejected'] &&
+        (!('rejectionReason' in data) || data.rejectionReason == null || (data.rejectionReason is string && data.rejectionReason.size() <= 200)) &&
+        data.createdAt is timestamp &&
+        (!('reviewedAt' in data) || data.reviewedAt == null || data.reviewedAt is timestamp);
+    }
+
+    function isValidWithdrawalRequest(data) {
+      return data.keys().hasAll([
+          'id', 'uid', 'userName', 'userPhone', 'withdrawalAmount',
+          'claimFeeAmount', 'method', 'utrNumber', 'bankDetails', 'status', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'uid', 'userName', 'userPhone', 'withdrawalAmount',
+          'claimFeeAmount', 'method', 'utrNumber', 'bankDetails',
+          'status', 'rejectionReason', 'createdAt', 'reviewedAt'
+        ]) &&
+        isValidId(data.id) &&
+        isValidId(data.uid) &&
+        data.userName is string && data.userName.size() >= 2 && data.userName.size() <= 80 &&
+        data.userPhone is string && data.userPhone.size() <= 120 &&
+        data.withdrawalAmount is number && data.withdrawalAmount >= 1 && data.withdrawalAmount <= 100000 &&
+        data.claimFeeAmount is number && data.claimFeeAmount >= 0 && data.claimFeeAmount <= 50000 &&
+        data.method in ['UPI_ID', 'QR_CODE', 'DIRECT_IMPS'] &&
+        data.utrNumber is string && data.utrNumber.size() >= 10 && data.utrNumber.size() <= 22 && data.utrNumber.matches('^[A-Z0-9\\-]{10,22}$') &&
+        isValidBankDetails(data.bankDetails) &&
+        data.status in ['pending', 'approved', 'rejected'] &&
+        (!('rejectionReason' in data) || data.rejectionReason == null || (data.rejectionReason is string && data.rejectionReason.size() <= 200)) &&
+        data.createdAt is timestamp &&
+        (!('reviewedAt' in data) || data.reviewedAt == null || data.reviewedAt is timestamp);
+    }
+
+    function isValidReferralCodeIndex(data) {
+      return data.keys().hasAll(['code', 'ownerUid', 'createdAt']) &&
+        data.keys().hasOnly(['code', 'ownerUid', 'createdAt']) &&
+        data.code is string && data.code.size() >= 6 && data.code.size() <= 16 && data.code.matches('^[A-Z0-9]{6,16}$') &&
+        isValidId(data.ownerUid) &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidReferralRecord(data) {
+      return data.keys().hasAll([
+          'id', 'referrerUid', 'referredUid', 'inviteCode',
+          'referredName', 'maskedPhone', 'level', 'rechargeAmount',
+          'commissionEarned', 'joinedAt'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'referrerUid', 'referredUid', 'inviteCode',
+          'referredName', 'maskedPhone', 'level', 'rechargeAmount',
+          'commissionEarned', 'joinedAt'
+        ]) &&
+        isValidId(data.id) &&
+        isValidId(data.referrerUid) &&
+        isValidId(data.referredUid) &&
+        data.inviteCode is string && data.inviteCode.size() >= 6 && data.inviteCode.size() <= 16 && data.inviteCode.matches('^[A-Z0-9]{6,16}$') &&
+        data.referredName is string && data.referredName.size() >= 2 && data.referredName.size() <= 80 &&
+        data.maskedPhone is string && data.maskedPhone.size() >= 4 && data.maskedPhone.size() <= 20 &&
+        data.level is number && data.level in [1, 2, 3] &&
+        data.rechargeAmount is number && data.rechargeAmount >= 0 &&
+        data.commissionEarned is number && data.commissionEarned >= 0 &&
+        data.joinedAt is timestamp;
+    }
+
+    // 1. Platform Settings
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId) && isSignedIn();
+      allow list: if false;
+      allow create: if isValidId(settingId) && isAdmin() && isValidPlatformSettings(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(settingId) && isAdmin() && isValidPlatformSettings(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    // 2. Plan Catalog
+    match /plans/{planId} {
+      allow get: if isValidId(planId) && isSignedIn();
+      allow list: if isSignedIn() && resource.data.category in ['normal', 'vip'];
+      allow create: if isValidId(planId) && isAdmin() && isValidPlanConfig(incoming()) && incoming().id == planId && incoming().updatedAt == request.time;
+      allow update: if isValidId(planId) && isAdmin() && isValidPlanConfig(incoming()) && incoming().id == planId && incoming().updatedAt == request.time;
+      allow delete: if isValidId(planId) && isAdmin();
+    }
+
+    // 3. Admins Registry
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && (isOwner(uid) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(uid) && isAdmin() && isValidAdminRecord(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(uid) && isAdmin() && isValidAdminRecord(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(uid) && isAdmin();
+    }
+
+    // 4. Users (PII-Isolated: Owner or Admin Only)
+    match /users/{uid} {
+      allow get: if isValidId(uid) && (isOwner(uid) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(uid) && isOwner(uid) &&
+        isValidUser(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        incoming().accountStatus == 'active' &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        incoming().lastLoginAt == request.time &&
+        (
+          (exists(/databases/$(database)/documents/settings/platform) &&
+           incoming().balance == get(/databases/$(database)/documents/settings/platform).data.signupBonusAmount) ||
+          (!exists(/databases/$(database)/documents/settings/platform) &&
+           incoming().balance == 40)
+        );
+      allow update: if isValidId(uid) && isValidUser(incoming()) && (
+        (isAdmin() && incoming().uid == existing().uid && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time) ||
+        (
+          isOwner(uid) &&
+          existing().accountStatus == 'active' &&
+          incoming().uid == existing().uid &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            // Action: Update theme
+            (incoming().diff(existing()).affectedKeys().hasOnly(['darkMode', 'updatedAt'])) ||
+            // Action: Record login timestamp
+            (incoming().diff(existing()).affectedKeys().hasOnly(['lastLoginAt', 'updatedAt']) && incoming().lastLoginAt == request.time) ||
+            // Action: Update bank details
+            (incoming().diff(existing()).affectedKeys().hasOnly(['bankDetails', 'updatedAt'])) ||
+            // Action: Purchase plan (atomically linked to activePlans create)
+            (incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'lastPlanActionId', 'updatedAt']) &&
+             incoming().lastPlanActionId is string &&
+             incoming().balance >= 0 &&
+             incoming().balance < existing().balance &&
+             existsAfter(/databases/$(database)/documents/users/$(uid)/activePlans/$(incoming().lastPlanActionId))) ||
+            // Action: Daily check-in reward
+            (incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'lastCheckInDate', 'lastCheckInReward', 'updatedAt']) &&
+             incoming().lastCheckInDate is string &&
+             incoming().lastCheckInDate != existing().lastCheckInDate &&
+             incoming().lastCheckInReward is number &&
+             incoming().balance == existing().balance + incoming().lastCheckInReward &&
+             (
+               (exists(/databases/$(database)/documents/settings/platform) &&
+                incoming().lastCheckInReward == get(/databases/$(database)/documents/settings/platform).data.checkInRewardAmount) ||
+               (!exists(/databases/$(database)/documents/settings/platform) &&
+                incoming().lastCheckInReward == 25)
+             )) ||
+            // Action: Claim daily plan yield (atomically linked to activePlans update)
+            (incoming().diff(existing()).affectedKeys().hasOnly(['balance', 'lastPlanActionId', 'updatedAt']) &&
+             incoming().lastPlanActionId is string &&
+             exists(/databases/$(database)/documents/users/$(uid)/activePlans/$(incoming().lastPlanActionId)) &&
+             incoming().balance == existing().balance + get(/databases/$(database)/documents/users/$(uid)/activePlans/$(incoming().lastPlanActionId)).data.dailyIncome &&
+             getAfter(/databases/$(database)/documents/users/$(uid)/activePlans/$(incoming().lastPlanActionId)).data.daysClaimed == get(/databases/$(database)/documents/users/$(uid)/activePlans/$(incoming().lastPlanActionId)).data.daysClaimed + 1)
+          )
+        )
+      );
+      allow delete: if isValidId(uid) && isAdmin();
+
+      // 5. User Active Plans Subcollection (Master Gate)
+      match /activePlans/{activePlanId} {
+        allow get: if isValidId(uid) && isValidId(activePlanId) && (isOwner(uid) || isAdmin());
+        allow list: if isValidId(uid) && (isOwner(uid) || isAdmin());
+        allow create: if isValidId(uid) && isValidId(activePlanId) && isValidActivePlan(incoming()) && (
+          isAdmin() ||
+          (
+            isOwner(uid) &&
+            incoming().uid == request.auth.uid &&
+            incoming().id == activePlanId &&
+            incoming().daysClaimed == 0 &&
+            incoming().purchasedAt == request.time &&
+            incoming().updatedAt == request.time &&
+            get(/databases/$(database)/documents/users/$(uid)).data.accountStatus == 'active' &&
+            getAfter(/databases/$(database)/documents/users/$(uid)).data.balance == get(/databases/$(database)/documents/users/$(uid)).data.balance - incoming().investmentAmount &&
+            (
+              !exists(/databases/$(database)/documents/plans/$(incoming().planId)) ||
+              (
+                get(/databases/$(database)/documents/plans/$(incoming().planId)).data.investmentAmount == incoming().investmentAmount &&
+                get(/databases/$(database)/documents/plans/$(incoming().planId)).data.dailyIncome == incoming().dailyIncome &&
+                get(/databases/$(database)/documents/plans/$(incoming().planId)).data.durationDays == incoming().durationDays
+              )
+            )
+          )
+        );
+        allow update: if isValidId(uid) && isValidId(activePlanId) && isValidActivePlan(incoming()) && (
+          isAdmin() ||
+          (
+            isOwner(uid) &&
+            incoming().uid == existing().uid &&
+            incoming().id == existing().id &&
+            incoming().planId == existing().planId &&
+            incoming().purchasedAt == existing().purchasedAt &&
+            incoming().updatedAt == request.time &&
+            existing().daysClaimed < existing().durationDays &&
+            get(/databases/$(database)/documents/users/$(uid)).data.accountStatus == 'active' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['daysClaimed', 'lastClaimDate', 'updatedAt']) &&
+            incoming().daysClaimed == existing().daysClaimed + 1 &&
+            incoming().lastClaimDate is string &&
+            incoming().lastClaimDate != existing().lastClaimDate &&
+            getAfter(/databases/$(database)/documents/users/$(uid)).data.balance == get(/databases/$(database)/documents/users/$(uid)).data.balance + existing().dailyIncome
+          )
+        );
+        allow delete: if isValidId(uid) && isValidId(activePlanId) && isAdmin();
+      }
+
+      // 6. User Transactions Ledger (Master Gate)
+      match /transactions/{txId} {
+        allow get: if isValidId(uid) && isValidId(txId) && (isOwner(uid) || isAdmin());
+        allow list: if isValidId(uid) && (isOwner(uid) || isAdmin());
+        allow create: if isValidId(uid) && isValidId(txId) && isValidTransaction(incoming()) && (
+          isAdmin() ||
+          (
+            isOwner(uid) &&
+            incoming().uid == request.auth.uid &&
+            incoming().id == txId &&
+            incoming().kind in ['purchase', 'checkin', 'yield', 'bonus'] &&
+            incoming().timestamp == request.time &&
+            (incoming().kind != 'bonus' || incoming().amount <= 500)
+          )
+        );
+        allow update, delete: if isValidId(uid) && isValidId(txId) && isAdmin();
+      }
+    }
+
+    // 7. Recharge Requests
+    match /rechargeRequests/{requestId} {
+      allow get: if isValidId(requestId) && (isAdmin() || (isSignedIn() && existing().uid == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isValidId(requestId) && isSignedIn() && isValidRechargeRequest(incoming()) &&
+        incoming().id == requestId &&
+        (incoming().uid == request.auth.uid || isAdmin()) &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(requestId) && isAdmin() && isValidRechargeRequest(incoming()) &&
+        existing().status == 'pending' &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().reviewedAt == request.time;
+      allow delete: if isValidId(requestId) && isAdmin();
+    }
+
+    // 8. Withdrawal Requests
+    match /withdrawalRequests/{requestId} {
+      allow get: if isValidId(requestId) && (isAdmin() || (isSignedIn() && existing().uid == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isValidId(requestId) && isSignedIn() && isValidWithdrawalRequest(incoming()) &&
+        incoming().id == requestId &&
+        (incoming().uid == request.auth.uid || isAdmin()) &&
+        incoming().status == 'pending' &&
+        incoming().createdAt == request.time &&
+        get(/databases/$(database)/documents/users/$(incoming().uid)).data.accountStatus == 'active' &&
+        get(/databases/$(database)/documents/users/$(incoming().uid)).data.balance >= incoming().withdrawalAmount;
+      allow update: if isValidId(requestId) && isAdmin() && isValidWithdrawalRequest(incoming()) &&
+        existing().status == 'pending' &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().reviewedAt == request.time;
+      allow delete: if isValidId(requestId) && isAdmin();
+    }
+
+    // 9. Referral Code Index (Exact-Get Only, No List)
+    match /referralCodes/{code} {
+      allow get: if isValidId(code) && isSignedIn();
+      allow list: if false;
+      allow create: if isValidId(code) && isSignedIn() && isValidReferralCodeIndex(incoming()) &&
+        incoming().code == code &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().createdAt == request.time;
+      allow update, delete: if isValidId(code) && isAdmin();
+    }
+
+    // 10. Referral Relationships
+    match /referrals/{referralId} {
+      allow get: if isValidId(referralId) && (isAdmin() || (isSignedIn() && (existing().referrerUid == request.auth.uid || existing().referredUid == request.auth.uid)));
+      allow list: if isAdmin() || (isSignedIn() && (resource.data.referrerUid == request.auth.uid || resource.data.referredUid == request.auth.uid));
+      allow create: if isValidId(referralId) && isSignedIn() && isValidReferralRecord(incoming()) &&
+        incoming().id == referralId &&
+        incoming().referredUid == request.auth.uid &&
+        incoming().referrerUid != request.auth.uid &&
+        incoming().level == 1 &&
+        incoming().rechargeAmount == 0 &&
+        incoming().commissionEarned == 0 &&
+        incoming().joinedAt == request.time &&
+        exists(/databases/$(database)/documents/referralCodes/$(incoming().inviteCode)) &&
+        get(/databases/$(database)/documents/referralCodes/$(incoming().inviteCode)).data.ownerUid == incoming().referrerUid;
+      allow update, delete: if isValidId(referralId) && isAdmin();
+    }
+  }
+}
